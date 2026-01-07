@@ -19,6 +19,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built files
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 443
+# Health check for Hugging Face deployment
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:80/index.html || exit 1
+
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 
