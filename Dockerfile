@@ -1,7 +1,13 @@
 # Multi-stage Dockerfile for building a Vite + Vue app and serving with nginx
 
-FROM node:24-alpine AS build
+FROM node:24-bullseye-slim AS build
 WORKDIR /app
+
+# Install system build tools so native modules (lightningcss, rolldown) can
+# compile or load their prebuilt binaries on Debian/GLIBC systems.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+		build-essential python3 make g++ ca-certificates pkg-config \
+	&& rm -rf /var/lib/apt/lists/*
 
 # install dependencies
 COPY package.json package-lock.json* ./
@@ -19,10 +25,10 @@ COPY nginx.conf /etc/nginx/conf.d/default.conf
 # Copy built files
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Health check for Hugging Face deployment
-HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:80/index.html || exit 1
+# Expose the app on port 7860 for Hugging Face or custom deployments
+EXPOSE 3000
 
-EXPOSE 80
+# Healthcheck updated by user request should be handled externally if needed.
 CMD ["nginx", "-g", "daemon off;"]
+
 
